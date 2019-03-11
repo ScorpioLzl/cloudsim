@@ -145,7 +145,61 @@ public class DatacenterBroker extends SimEntity {
 	public void bindCloudletToVm(int cloudletId, int vmId) {
 		CloudletList.getById(getCloudletList(), cloudletId).setVmId(vmId);
 	}
-
+	
+	public void bindCloudletToVmAnt(int vmNum,int cloudletNum) {
+		int iteratorNum = 100;//迭代次数
+		int antNum = 100;//蚂蚁数量
+		int randomAnt = 20;//随机的蚂蚁数量
+		double timeMatrix[][] = new double[cloudletNum][vmNum];//处理时间矩阵
+		double pheromoneMatrix[][] = new double[cloudletNum][vmNum];;//信息素矩阵
+		int maxPheromoneMatrix[] = new int[cloudletNum];//信息素矩阵中每行中信息素最大的下标
+		
+		for(int i=0;i<cloudletNum;i++) {
+			for(int j=0;j<vmNum;j++) {
+				timeMatrix[i][j]=(double)CloudletList.getById(getCloudletList(), i).getCloudletLength()/vmList.get(j).getMips();
+			}
+		}//初始化时间矩阵
+		
+		for(int i=0;i<cloudletNum;i++) {
+			for(int j=0;j<vmNum;j++) {
+				pheromoneMatrix[i][j]=1;
+			}
+		}//初始化信息素矩阵
+		
+		maxPheromoneMatrix = findMaxPheromone(pheromoneMatrix);//初始化最大信息素数组
+		
+		for(int itCount=0;itCount<iteratorNum;itCount++) {
+			for(int antCount=0;antCount<antNum-randomAnt;antCount++) {
+				
+			}//根据信息素启发的蚂蚁
+			
+			for(int antCount = antNum-randomAnt;antCount<antNum;antCount++) {
+				
+			}//随机蚂蚁
+			
+			//计算时间
+			
+			//更新信息素
+		}
+		
+	}
+	public int[] findMaxPheromone(double[][] pheromoneMatrix) {
+		int max = 0;
+		double maxPheromone = -1;
+		int maxPheromoneMatrix[] = new int[pheromoneMatrix.length];
+		for(int i = 0;i < pheromoneMatrix.length;i++) {
+			for(int j = 0;j<pheromoneMatrix[0].length;j++) {
+				if(pheromoneMatrix[i][j]>maxPheromone) {
+					maxPheromone = pheromoneMatrix[i][j];
+					max = j;
+				}
+			}
+			maxPheromoneMatrix[i] = max;
+			max = 0;
+			maxPheromone = -1;
+		}
+		return maxPheromoneMatrix;
+	}
 	@Override
 	public void processEvent(SimEvent ev) {
 		switch (ev.getTag()) {
