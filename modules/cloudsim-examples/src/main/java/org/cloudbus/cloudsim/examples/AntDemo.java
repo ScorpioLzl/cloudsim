@@ -119,7 +119,6 @@ Datacenter datacenter0 = createDatacenter("Datacenter_0");
 //Third step: Create Broker
 DatacenterBroker broker = createBroker();
 int brokerId = broker.getId();
-
 //Fourth step: Create VMs and Cloudlets and send them to broker
 vmlist = createVM(brokerId,100); //creating 100 vms
 cloudletList = createCloudlet(brokerId,300); // creating 300 cloudlets

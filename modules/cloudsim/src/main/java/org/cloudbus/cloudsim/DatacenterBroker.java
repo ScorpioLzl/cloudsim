@@ -147,12 +147,13 @@ public class DatacenterBroker extends SimEntity {
 	}
 	
 	public void bindCloudletToVmAnt(int vmNum,int cloudletNum) {
-		int iteratorNum = 100;//迭代次数
+		int iteratorNum = 50;//迭代次数
 		int antNum = 100;//蚂蚁数量
-		int randomAnt = 20;//随机的蚂蚁数量
+		int randomAnt = 15;//随机的蚂蚁数量
 		double timeMatrix[][] = new double[cloudletNum][vmNum];//处理时间矩阵
 		double pheromoneMatrix[][] = new double[cloudletNum][vmNum];;//信息素矩阵
-		int maxPheromoneMatrix[] = new int[cloudletNum];//信息素矩阵中每行中信息素最大的下标
+		int pathMatrix[][][]= new int[antNum][cloudletNum][vmNum];//所有蚂蚁的路径
+		double timeAllAnt[] = new double[antNum];//每只蚂蚁的处理时间
 		
 		for(int i=0;i<cloudletNum;i++) {
 			for(int j=0;j<vmNum;j++) {
@@ -166,39 +167,136 @@ public class DatacenterBroker extends SimEntity {
 			}
 		}//初始化信息素矩阵
 		
-		maxPheromoneMatrix = findMaxPheromone(pheromoneMatrix);//初始化最大信息素数组
-		
 		for(int itCount=0;itCount<iteratorNum;itCount++) {
+			Log.print("迭代次数："+itCount+"\n");
 			for(int antCount=0;antCount<antNum-randomAnt;antCount++) {
-				
+				for(int cloudletCount = 0;cloudletCount<cloudletNum;cloudletCount++) {
+					pathMatrix[antCount][cloudletCount][findMaxPheromone(pheromoneMatrix)[cloudletCount]]=1;
+				}
 			}//根据信息素启发的蚂蚁
 			
 			for(int antCount = antNum-randomAnt;antCount<antNum;antCount++) {
-				
+				for(int cloudletCount = 0;cloudletCount<cloudletNum;cloudletCount++) {
+					pathMatrix[antCount][cloudletCount][(int)(Math.random()*vmNum)]=1;
+				}
 			}//随机蚂蚁
 			
+			timeAllAnt = maxTime(antNum, timeMatrix, pathMatrix);
 			//计算时间
-			
+			Log.print("最小时间："+findmin(timeAllAnt)+"\n");
+			updatePheromoneMatrix(pheromoneMatrix, timeAllAnt, pathMatrix,timeMatrix);
 			//更新信息素
+			if(itCount!=iteratorNum-1) {
+			for(int i = 0;i<antNum;i++) {
+				for(int j = 0;j<cloudletNum;j++) {
+					for(int k = 0;k<vmNum;k++) {
+						pathMatrix[i][j][k]=0;
+					}
+				}
+			}
+			}//清空路径矩阵
 		}
-		
+//		for(int i = 0;i<cloudletNum;i++) {
+//			for(int j = 0;j< vmNum;j++) {
+//				if(pathMatrix[0][i][j]==1) {
+//					bindCloudletToVm(i, j);
+//				}
+//			}
+//		}
 	}
+	/**
+	 * 返回信息素矩阵每行中信息素最大的下标数组
+	 * @param pheromoneMatrix
+	 * @return
+	 */
 	public int[] findMaxPheromone(double[][] pheromoneMatrix) {
-		int max = 0;
+		ArrayList <Integer> maxIndex = new ArrayList<>();
 		double maxPheromone = -1;
 		int maxPheromoneMatrix[] = new int[pheromoneMatrix.length];
 		for(int i = 0;i < pheromoneMatrix.length;i++) {
 			for(int j = 0;j<pheromoneMatrix[0].length;j++) {
 				if(pheromoneMatrix[i][j]>maxPheromone) {
 					maxPheromone = pheromoneMatrix[i][j];
-					max = j;
+					maxIndex.clear();
+					maxIndex.add(j);
+				}else if(pheromoneMatrix[i][j]==maxPheromone) {
+					maxIndex.add(j);
 				}
 			}
-			maxPheromoneMatrix[i] = max;
-			max = 0;
+			maxPheromoneMatrix[i] = maxIndex.get((int)(Math.random()*maxIndex.size()));
+			maxIndex.clear();
 			maxPheromone = -1;
 		}
 		return maxPheromoneMatrix;
+	}
+	/**
+	 * 计算单次迭代中每只蚂蚁的时间
+	 * @param antNum
+	 * @param timeMatrix
+	 * @param pathMatrix
+	 * @return
+	 */
+	public double[] maxTime(int antNum,double timeMatrix[][],int pathMatrix[][][]){
+		double timeAllAnt[] = new double[antNum];
+		double maxTime = 0;
+		for(int antCount = 0;antCount<antNum;antCount++) {
+			for(int j = 0;j<pathMatrix[0][0].length;j++) {
+				double nodeTime = 0;
+				for(int i = 0;i<pathMatrix[0].length;i++) {
+					if(pathMatrix[antCount][i][j]==1) {
+						nodeTime += timeMatrix[i][j];
+					}
+				}
+				if(nodeTime>maxTime)
+					maxTime = nodeTime;
+			}
+			timeAllAnt[antCount]=maxTime;
+			maxTime = 0;
+		}
+		return timeAllAnt;
+	}
+	/**
+	 * 更新信息素矩阵
+	 * @param pheromoneMatrix
+	 * @param timeAllAnt
+	 * @param pathMatrix
+	 */
+	public void updatePheromoneMatrix(double pheromoneMatrix[][],double timeAllAnt[],int pathMatrix[][][],double timeMatrix[][]) {
+		double loss = 0.5;
+		for(int i = 0;i<pheromoneMatrix.length;i++) {
+			for(int j =0;j<pheromoneMatrix[0].length;j++) {
+				pheromoneMatrix[i][j] *= loss;
+			}
+		}
+		//挥发
+		for(int antCount = 0;antCount<timeAllAnt.length;antCount++) {
+			ArrayList <Integer> cloudlets = new ArrayList<>();
+			double[] timeArray = new double[pheromoneMatrix[0].length];
+			for(int j = 0;j<pheromoneMatrix[0].length;j++) {
+				for(int i = 0;i<pheromoneMatrix.length;i++) {
+					if(pathMatrix[antCount][i][j]==1) {
+						cloudlets.add(i);
+					}
+				}
+				for(int cloudletsCount = 0;cloudletsCount<cloudlets.size();cloudletsCount++) {
+					timeArray[j] += timeMatrix[cloudlets.get(cloudletsCount)][j];
+				}
+				for(int i = 0;i<pheromoneMatrix.length;i++) {
+					if(pathMatrix[antCount][i][j]==1) {
+						pheromoneMatrix[i][j] += 1/timeArray[j];
+					}
+				}
+				cloudlets.clear();//虚拟机上的任务列表清空
+			}
+		}
+		
+	}
+	public double findmin(double timeAllAnt[]) {
+		double min = 1000;
+		for(double a:timeAllAnt) {
+			if(a<min)min = a;
+		}
+		return min;
 	}
 	@Override
 	public void processEvent(SimEvent ev) {
