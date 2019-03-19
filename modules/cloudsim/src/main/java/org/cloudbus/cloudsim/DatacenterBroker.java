@@ -171,7 +171,7 @@ public class DatacenterBroker extends SimEntity {
 			Log.print("迭代次数："+itCount+"\n");
 			for(int antCount=0;antCount<antNum-randomAnt;antCount++) {
 				for(int cloudletCount = 0;cloudletCount<cloudletNum;cloudletCount++) {
-					pathMatrix[antCount][cloudletCount][findMaxPheromone(pheromoneMatrix)[cloudletCount]]=1;
+					choosePath(antCount, cloudletCount, calChance(cloudletCount, pheromoneMatrix, timeMatrix), pathMatrix);
 				}
 			}//根据信息素启发的蚂蚁
 			
@@ -196,13 +196,13 @@ public class DatacenterBroker extends SimEntity {
 			}
 			}//清空路径矩阵
 		}
-//		for(int i = 0;i<cloudletNum;i++) {
-//			for(int j = 0;j< vmNum;j++) {
-//				if(pathMatrix[0][i][j]==1) {
-//					bindCloudletToVm(i, j);
-//				}
-//			}
-//		}
+		for(int i = 0;i<cloudletNum;i++) {
+			for(int j = 0;j< vmNum;j++) {
+				if(pathMatrix[0][i][j]==1) {
+					bindCloudletToVm(i, j);
+				}
+			}
+		}
 	}
 	/**
 	 * 返回信息素矩阵每行中信息素最大的下标数组
@@ -283,7 +283,7 @@ public class DatacenterBroker extends SimEntity {
 				}
 				for(int i = 0;i<pheromoneMatrix.length;i++) {
 					if(pathMatrix[antCount][i][j]==1) {
-						pheromoneMatrix[i][j] += 1/timeArray[j];
+						pheromoneMatrix[i][j] += 2/timeArray[j];
 					}
 				}
 				cloudlets.clear();//虚拟机上的任务列表清空
@@ -291,12 +291,54 @@ public class DatacenterBroker extends SimEntity {
 		}
 		
 	}
+	/**
+	 * 找到所有蚂蚁中最短的时间
+	 * @param timeAllAnt
+	 * @return
+	 */
 	public double findmin(double timeAllAnt[]) {
 		double min = 1000;
 		for(double a:timeAllAnt) {
 			if(a<min)min = a;
 		}
 		return min;
+	}
+	/**
+	 * 计算云任务在各个虚拟机上分配的概率
+	 * @param cloudletCount
+	 * @param pheromoneMatrix
+	 * @param timeMatrix
+	 * @return
+	 */
+	public double[] calChance(int cloudletCount,double pheromoneMatrix[][],double timeMatrix[][]) {
+			double alpha = 3.2;
+			double beta = 5;
+			double denominator = 0;
+			double chance[] = new double[pheromoneMatrix[0].length];
+				for(int j = 0;j<pheromoneMatrix[0].length;j++) {
+					denominator += Math.pow(pheromoneMatrix[cloudletCount][j],alpha)*Math.pow(1/timeMatrix[cloudletCount][j], beta);
+				}
+				for(int j = 0;j<pheromoneMatrix[0].length;j++) {
+					chance[j] = Math.pow(pheromoneMatrix[cloudletCount][j],alpha)*Math.pow(1/timeMatrix[cloudletCount][j], beta)/denominator;
+				}
+			return chance;
+	}
+	/**
+	 * 根据概率选择路径
+	 * @param antCount
+	 * @param cloudCount
+	 * @param chance
+	 * @param pathMatrix
+	 */
+	public void choosePath(int antCount, int cloudletCount, double[] chance, int pathMatrix[][][]) {
+		double rand = Math.random();
+		double nowchance = 0;
+		int i = 0;
+		while(nowchance<=rand) {
+			nowchance += chance[i];
+			i++;
+		}
+		pathMatrix[antCount][cloudletCount][i-1] = 1;
 	}
 	@Override
 	public void processEvent(SimEvent ev) {
