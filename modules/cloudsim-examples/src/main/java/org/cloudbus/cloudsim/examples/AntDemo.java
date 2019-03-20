@@ -120,12 +120,12 @@ Datacenter datacenter0 = createDatacenter("Datacenter_0");
 DatacenterBroker broker = createBroker();
 int brokerId = broker.getId();
 //Fourth step: Create VMs and Cloudlets and send them to broker
-vmlist = createVM(brokerId,200); //creating 100 vms
-cloudletList = createCloudlet(brokerId,500); // creating 300 cloudlets
+vmlist = createVM(brokerId,100); //creating 100 vms
+cloudletList = createCloudlet(brokerId,500); // creating 500 cloudlets
 broker.submitVmList(vmlist);
 broker.submitCloudletList(cloudletList);
 
-broker.bindCloudletToVmAnt(200, 500);
+broker.bindCloudletToVmAnt(100, 500);
 
 // Fifth step: Starts the simulation
 CloudSim.startSimulation();

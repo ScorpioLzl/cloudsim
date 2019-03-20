@@ -149,12 +149,13 @@ public class DatacenterBroker extends SimEntity {
 	public void bindCloudletToVmAnt(int vmNum,int cloudletNum) {
 		int iteratorNum = 50;//迭代次数
 		int antNum = 100;//蚂蚁数量
-		int randomAnt = 15;//随机的蚂蚁数量
+		int randomAnt = 20;//随机的蚂蚁数量
 		double timeMatrix[][] = new double[cloudletNum][vmNum];//处理时间矩阵
 		double pheromoneMatrix[][] = new double[cloudletNum][vmNum];;//信息素矩阵
 		int pathMatrix[][][]= new int[antNum][cloudletNum][vmNum];//所有蚂蚁的路径
 		double timeAllAnt[] = new double[antNum];//每只蚂蚁的处理时间
-		
+		double lastTime = 0;
+		boolean isDecline = false;
 		for(int i=0;i<cloudletNum;i++) {
 			for(int j=0;j<vmNum;j++) {
 				timeMatrix[i][j]=(double)CloudletList.getById(getCloudletList(), i).getCloudletLength()/vmList.get(j).getMips();
@@ -184,8 +185,13 @@ public class DatacenterBroker extends SimEntity {
 			timeAllAnt = maxTime(antNum, timeMatrix, pathMatrix);
 			//计算时间
 			Log.print("最小时间："+findmin(timeAllAnt)+"\n");
-			updatePheromoneMatrix(pheromoneMatrix, timeAllAnt, pathMatrix,timeMatrix);
+			if(lastTime>findmin(timeAllAnt)) {
+				isDecline = true;
+			}
+			lastTime = findmin(timeAllAnt);
+			updatePheromoneMatrix(pheromoneMatrix, timeAllAnt, pathMatrix,timeMatrix,isDecline);
 			//更新信息素
+			isDecline = false;
 			if(itCount!=iteratorNum-1) {
 			for(int i = 0;i<antNum;i++) {
 				for(int j = 0;j<cloudletNum;j++) {
@@ -261,7 +267,7 @@ public class DatacenterBroker extends SimEntity {
 	 * @param timeAllAnt
 	 * @param pathMatrix
 	 */
-	public void updatePheromoneMatrix(double pheromoneMatrix[][],double timeAllAnt[],int pathMatrix[][][],double timeMatrix[][]) {
+	public void updatePheromoneMatrix(double pheromoneMatrix[][],double timeAllAnt[],int pathMatrix[][][],double timeMatrix[][],boolean isDecline) {
 		double loss = 0.5;
 		for(int i = 0;i<pheromoneMatrix.length;i++) {
 			for(int j =0;j<pheromoneMatrix[0].length;j++) {
@@ -289,7 +295,23 @@ public class DatacenterBroker extends SimEntity {
 				cloudlets.clear();//虚拟机上的任务列表清空
 			}
 		}
-		
+		if (isDecline == true) {
+			int minIndex = 0;
+			double min = 1000;
+			for (int i = 0; i < timeAllAnt.length; i++) {
+				if (timeAllAnt[i] < min) {
+					min = timeAllAnt[i];
+					minIndex = i;
+				}
+			}
+			for (int i = 0; i < pheromoneMatrix.length; i++) {
+				for (int j = 0; j < pheromoneMatrix[0].length; j++) {
+					if (pathMatrix[minIndex][i][j] == 1) {
+						pheromoneMatrix[i][j] *= 1.4;
+					}
+				}
+			}
+		}
 	}
 	/**
 	 * 找到所有蚂蚁中最短的时间
@@ -312,7 +334,7 @@ public class DatacenterBroker extends SimEntity {
 	 */
 	public double[] calChance(int cloudletCount,double pheromoneMatrix[][],double timeMatrix[][]) {
 			double alpha = 3.2;
-			double beta = 5;
+			double beta = 4.5;
 			double denominator = 0;
 			double chance[] = new double[pheromoneMatrix[0].length];
 				for(int j = 0;j<pheromoneMatrix[0].length;j++) {
