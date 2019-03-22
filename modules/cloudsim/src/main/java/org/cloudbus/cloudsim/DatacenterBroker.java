@@ -149,13 +149,13 @@ public class DatacenterBroker extends SimEntity {
 	public void bindCloudletToVmAnt(int vmNum,int cloudletNum) {
 		int iteratorNum = 50;//迭代次数
 		int antNum = 100;//蚂蚁数量
-		int randomAnt = 20;//随机的蚂蚁数量
+		int randomAnt = 15;//随机的蚂蚁数量
 		double timeMatrix[][] = new double[cloudletNum][vmNum];//处理时间矩阵
 		double pheromoneMatrix[][] = new double[cloudletNum][vmNum];;//信息素矩阵
 		int pathMatrix[][][]= new int[antNum][cloudletNum][vmNum];//所有蚂蚁的路径
 		double timeAllAnt[] = new double[antNum];//每只蚂蚁的处理时间
-		double lastTime = 0;
-		boolean isDecline = false;
+		double lastTime = 0;//上一次迭代的最短时间
+		boolean isDecline = false;//是否下降的布尔值
 		for(int i=0;i<cloudletNum;i++) {
 			for(int j=0;j<vmNum;j++) {
 				timeMatrix[i][j]=(double)CloudletList.getById(getCloudletList(), i).getCloudletLength()/vmList.get(j).getMips();
@@ -167,6 +167,8 @@ public class DatacenterBroker extends SimEntity {
 				pheromoneMatrix[i][j]=1;
 			}
 		}//初始化信息素矩阵
+		
+		Log.printLine("原时间为："+calOriginTime(timeMatrix));
 		
 		for(int itCount=0;itCount<iteratorNum;itCount++) {
 			Log.print("迭代次数："+itCount+"\n");
@@ -191,7 +193,6 @@ public class DatacenterBroker extends SimEntity {
 			lastTime = findmin(timeAllAnt);
 			updatePheromoneMatrix(pheromoneMatrix, timeAllAnt, pathMatrix,timeMatrix,isDecline);
 			//更新信息素
-			isDecline = false;
 			if(itCount!=iteratorNum-1) {
 			for(int i = 0;i<antNum;i++) {
 				for(int j = 0;j<cloudletNum;j++) {
@@ -202,13 +203,38 @@ public class DatacenterBroker extends SimEntity {
 			}
 			}//清空路径矩阵
 		}
+		int best = findminIndex(timeAllAnt);
 		for(int i = 0;i<cloudletNum;i++) {
 			for(int j = 0;j< vmNum;j++) {
-				if(pathMatrix[0][i][j]==1) {
+				if(pathMatrix[best][i][j]==1) {
 					bindCloudletToVm(i, j);
 				}
 			}
+		}//将找到的最短路径绑定
+	}
+	/**
+	 * 计算原时间
+	 * @param timeMatrix
+	 * @return
+	 */
+	public double calOriginTime(double timeMatrix[][]) {
+		double originTime = 0;//原始时间
+		double nodeTime[] = new double[timeMatrix[0].length];
+		int cloudletCount = 0,vmCount = 0;
+		while(cloudletCount<timeMatrix.length) {
+			nodeTime[vmCount] += timeMatrix[cloudletCount][vmCount];
+			cloudletCount++;
+			vmCount++;
+			if(vmCount==timeMatrix[0].length) {
+				vmCount = 0;
+			}
 		}
+		for(double max:nodeTime) {
+			if(max>originTime) {
+				originTime = max;
+			}
+		}
+		return originTime;
 	}
 	/**
 	 * 返回信息素矩阵每行中信息素最大的下标数组
@@ -307,10 +333,11 @@ public class DatacenterBroker extends SimEntity {
 			for (int i = 0; i < pheromoneMatrix.length; i++) {
 				for (int j = 0; j < pheromoneMatrix[0].length; j++) {
 					if (pathMatrix[minIndex][i][j] == 1) {
-						pheromoneMatrix[i][j] *= 1.4;
+						pheromoneMatrix[i][j] *= 1.33;
 					}
 				}
 			}
+			isDecline = false;
 		}
 	}
 	/**
@@ -324,6 +351,22 @@ public class DatacenterBroker extends SimEntity {
 			if(a<min)min = a;
 		}
 		return min;
+	}
+	/**
+	 * 找到最短路径蚂蚁的序号
+	 * @param timeAllAnt
+	 * @return
+	 */
+	public int findminIndex(double timeAllAnt[]) {
+		double min = 1000;
+		int minIndex = 0;
+		for(int i = 0;i<timeAllAnt.length;i++) {
+			if(timeAllAnt[i]<min) {
+				min = timeAllAnt[i];
+				minIndex = i;
+			}
+		}
+		return minIndex;
 	}
 	/**
 	 * 计算云任务在各个虚拟机上分配的概率
@@ -420,8 +463,8 @@ public class DatacenterBroker extends SimEntity {
 		setDatacenterIdsList(CloudSim.getCloudResourceList());
 		setDatacenterCharacteristicsList(new HashMap<Integer, DatacenterCharacteristics>());
 
-		Log.printConcatLine(CloudSim.clock(), ": ", getName(), ": Cloud Resource List received with ",
-				getDatacenterIdsList().size(), " resource(s)");
+//		Log.printConcatLine(CloudSim.clock(), ": ", getName(), ": Cloud Resource List received with ",
+//				getDatacenterIdsList().size(), " resource(s)");
 
 		for (Integer datacenterId : getDatacenterIdsList()) {
 			sendNow(datacenterId, CloudSimTags.RESOURCE_CHARACTERISTICS, getId());
@@ -444,12 +487,12 @@ public class DatacenterBroker extends SimEntity {
 		if (result == CloudSimTags.TRUE) {
 			getVmsToDatacentersMap().put(vmId, datacenterId);
 			getVmsCreatedList().add(VmList.getById(getVmList(), vmId));
-			Log.printConcatLine(CloudSim.clock(), ": ", getName(), ": VM #", vmId,
-					" has been created in Datacenter #", datacenterId, ", Host #",
-					VmList.getById(getVmsCreatedList(), vmId).getHost().getId());
+//			Log.printConcatLine(CloudSim.clock(), ": ", getName(), ": VM #", vmId,
+//					" has been created in Datacenter #", datacenterId, ", Host #",
+//					VmList.getById(getVmsCreatedList(), vmId).getHost().getId());
 		} else {
-			Log.printConcatLine(CloudSim.clock(), ": ", getName(), ": Creation of VM #", vmId,
-					" failed in Datacenter #", datacenterId);
+//			Log.printConcatLine(CloudSim.clock(), ": ", getName(), ": Creation of VM #", vmId,
+//					" failed in Datacenter #", datacenterId);
 		}
 
 		incrementVmsAcks();
@@ -490,8 +533,8 @@ public class DatacenterBroker extends SimEntity {
 	protected void processCloudletReturn(SimEvent ev) {
 		Cloudlet cloudlet = (Cloudlet) ev.getData();
 		getCloudletReceivedList().add(cloudlet);
-		Log.printConcatLine(CloudSim.clock(), ": ", getName(), ": Cloudlet ", cloudlet.getCloudletId(),
-				" received");
+//		Log.printConcatLine(CloudSim.clock(), ": ", getName(), ": Cloudlet ", cloudlet.getCloudletId(),
+//				" received");
 		cloudletsSubmitted--;
 		if (getCloudletList().size() == 0 && cloudletsSubmitted == 0) { // all cloudlets executed
 			Log.printConcatLine(CloudSim.clock(), ": ", getName(), ": All Cloudlets executed. Finishing...");
@@ -543,8 +586,8 @@ public class DatacenterBroker extends SimEntity {
 		String datacenterName = CloudSim.getEntityName(datacenterId);
 		for (Vm vm : getVmList()) {
 			if (!getVmsToDatacentersMap().containsKey(vm.getId())) {
-				Log.printLine(CloudSim.clock() + ": " + getName() + ": Trying to Create VM #" + vm.getId()
-						+ " in " + datacenterName);
+//				Log.printLine(CloudSim.clock() + ": " + getName() + ": Trying to Create VM #" + vm.getId()
+//						+ " in " + datacenterName);
 				sendNow(datacenterId, CloudSimTags.VM_CREATE_ACK, vm);
 				requestedVms++;
 			}
@@ -583,8 +626,8 @@ public class DatacenterBroker extends SimEntity {
 			}
 
 			if (!Log.isDisabled()) {
-			    Log.printConcatLine(CloudSim.clock(), ": ", getName(), ": Sending cloudlet ",
-					cloudlet.getCloudletId(), " to VM #", vm.getId());
+//			    Log.printConcatLine(CloudSim.clock(), ": ", getName(), ": Sending cloudlet ",
+//					cloudlet.getCloudletId(), " to VM #", vm.getId());
 			}
 			
 			cloudlet.setVmId(vm.getId());
@@ -607,8 +650,8 @@ public class DatacenterBroker extends SimEntity {
 	 */
 	protected void clearDatacenters() {
 		for (Vm vm : getVmsCreatedList()) {
-			Log.printConcatLine(CloudSim.clock(), ": " + getName(), ": Destroying VM #", vm.getId());
-			sendNow(getVmsToDatacentersMap().get(vm.getId()), CloudSimTags.VM_DESTROY, vm);
+//			Log.printConcatLine(CloudSim.clock(), ": " + getName(), ": Destroying VM #", vm.getId());
+//			sendNow(getVmsToDatacentersMap().get(vm.getId()), CloudSimTags.VM_DESTROY, vm);
 		}
 
 		getVmsCreatedList().clear();
