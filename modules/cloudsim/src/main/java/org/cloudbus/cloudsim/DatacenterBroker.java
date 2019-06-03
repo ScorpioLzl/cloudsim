@@ -161,7 +161,6 @@ public class DatacenterBroker extends SimEntity {
 		double pheromoneMatrix1[][] = new double[cloudletNum][vmNum];
 		init(vmNum, cloudletNum, timeMatrix, pheromoneMatrix1);//初始化
 		Log.printLine("原时间为："+calOriginTime(timeMatrix));
-		
 		itProcess(randomAnt,iteratorNum, antNum, vmNum, cloudletNum, pathMatrix1, timeMatrix, pheromoneMatrix1, timeAllAnt1,false);//迭代过程
 		Log.printLine("原时间为："+calOriginTime(timeMatrix));
 		itProcess(randomAnt,iteratorNum, antNum, vmNum, cloudletNum, pathMatrix, timeMatrix, pheromoneMatrix, timeAllAnt, true);
@@ -175,7 +174,7 @@ public class DatacenterBroker extends SimEntity {
 		}//将找到的最短路径绑定
 	}
 	/**
-	 * 初始化实践矩阵和信息素矩阵
+	 * 初始化时间矩阵和信息素矩阵
 	 * @param vmNum
 	 * @param cloudletNum
 	 * @param timeMatrix

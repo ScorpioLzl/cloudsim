@@ -1,3 +1,4 @@
+
 package org.cloudbus.cloudsim.examples;
 /**
  * 
@@ -107,24 +108,23 @@ try {
 int num_user = 1;   // number of grid users
 Calendar calendar = Calendar.getInstance();
 boolean trace_flag = false;  // mean trace events
-
 // Initialize the CloudSim library
 CloudSim.init(num_user, calendar, trace_flag);
 
 // Second step: Create Datacenters
-//Datacenters are the resource providers in CloudSim. We need at list one of them to run a CloudSim simulation
+//Datacenters are the resource providers in CloudSim. We need at least one of them to run a CloudSim simulation
 @SuppressWarnings("unused")
 Datacenter datacenter0 = createDatacenter("Datacenter_0");
 
 //Third step: Create Broker
 DatacenterBroker broker = createBroker();
 int brokerId = broker.getId();
+
 //Fourth step: Create VMs and Cloudlets and send them to broker
 vmlist = createVM(brokerId,100); //creating 100 vms
 cloudletList = createCloudlet(brokerId,1000); // creating 500 cloudlets
 broker.submitVmList(vmlist);
 broker.submitCloudletList(cloudletList);
-
 broker.bindCloudletToVmAnt(100, 1000);
 
 // Fifth step: Starts the simulation
@@ -132,11 +132,8 @@ CloudSim.startSimulation();
 
 // Final step: Print results when simulation is over
 List<Cloudlet> newList = broker.getCloudletReceivedList();
-
 CloudSim.stopSimulation();
-
 printCloudletList(newList);
-
 Log.printLine("AntDemo finished!");
 }
 catch (Exception e)
